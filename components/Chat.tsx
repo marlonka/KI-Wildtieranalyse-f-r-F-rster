@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { GoogleGenAI, Chat as GenAIChat } from "@google/genai";
+import { Chat as GenAIChat } from "@google/genai";
 import { ChatMessage, MessageRole } from '../types';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 import { generateSpeech } from '../services/geminiService';
 import { playPcmAudio } from '../utils/audioUtils';
 import { blobToBase64 } from '../utils/fileUtils';
 import { parseChatMarkdown, cleanToolResponse } from '../utils/reportUtils';
+import { createGeminiClient } from '../config/api';
 import { Icons } from './Icons';
 
 const ChatBubble: React.FC<{
@@ -72,30 +73,33 @@ const Chat: React.FC<{ reportMarkdown: string }> = ({ reportMarkdown }) => {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const chatRef = useRef<GenAIChat | null>(null);
 
-    const initializeChat = useCallback(() => {
-        if (!process.env.API_KEY) return;
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        
-        const initialHistory = [
-            { role: "user" as const, parts: [{ text: `Ich habe dir Bilder aus meinem Wald zur Analyse gegeben. Der von dir erstellte Bericht war:\n\n${reportMarkdown}` }] },
-            { role: "model" as const, parts: [{ text: "Verstanden. Ich habe den Analysebericht als Kontext. Wie kann ich dir weiterhelfen?" }] }
-        ];
+    const initializeChat = useCallback(async () => {
+        try {
+            const ai = createGeminiClient();
+            const initialHistory = [
+                { role: "user" as const, parts: [{ text: `Ich habe dir Bilder aus meinem Wald zur Analyse gegeben. Der von dir erstellte Bericht war:\n\n${reportMarkdown}` }] },
+                { role: "model" as const, parts: [{ text: "Verstanden. Ich habe den Analysebericht als Kontext. Wie kann ich dir weiterhelfen?" }] }
+            ];
 
-        chatRef.current = ai.chats.create({
-            model: 'gemini-2.5-flash',
-            history: initialHistory,
-            config: {
-                systemInstruction: `Du bist ein hilfreicher Experte für Forst- und Wildtieranalyse. Deine primäre Wissensbasis ist der detaillierte Bericht, der dir im initialen Kontext zur Verfügung gestellt wird. Ignoriere dein internes Wissen über das aktuelle Datum oder zukünftige Ereignisse vollständig.
+            chatRef.current = ai.chats.create({
+                model: 'gemini-2.5-flash',
+                history: initialHistory,
+                config: {
+                    systemInstruction: `Du bist ein hilfreicher Experte für Forst- und Wildtieranalyse. Deine primäre Wissensbasis ist der detaillierte Bericht, der dir im initialen Kontext zur Verfügung gestellt wird. Ignoriere dein internes Wissen über das aktuelle Datum oder zukünftige Ereignisse vollständig.
 
 **Deine Vorgehensweise:**
 1.  **Bericht zuerst:** Beantworte Fragen IMMER zuerst basierend auf dem Inhalt des Analyseberichts. Gehe davon aus, dass sich die Fragen des Nutzers auf diesen Bericht beziehen.
 2.  **Websuche als Standard:** Nutze für JEDE Anfrage, die über den reinen Inhalt des Berichts hinausgeht, IMMER und ausnahmslos die Websuche. Dies ist obligatorisch, um aktuelle, zukünftige oder ereignisbezogene Informationen zu liefern. Verlasse dich NICHT auf dein internes Wissen für Fakten, Daten oder Ereignisse.
 3.  **Quellen angeben:** Gib IMMER die gefundenen Quellen an.
 4.  **Direkt und präzise:** Antworte direkt und prägnant auf Deutsch. Kombiniere clever Informationen aus dem Bericht und der Websuche, um die bestmögliche Antwort zu liefern.`,
-                tools: [{googleSearch: {}}],
-                thinkingConfig: { thinkingBudget: 24576 }
-            }
-        });
+                    tools: [{googleSearch: {}}],
+                    thinkingConfig: { thinkingBudget: 24576 }
+                }
+            });
+        } catch (error) {
+            console.error("Failed to initialize chat:", error);
+            setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: MessageRole.ASSISTANT, text: "Chat konnte nicht initialisiert werden. Überprüfen Sie die API-Schlüssel-Konfiguration." }]);
+        }
     }, [reportMarkdown]);
 
     useEffect(() => { initializeChat(); }, [initializeChat]);
@@ -114,10 +118,10 @@ const Chat: React.FC<{ reportMarkdown: string }> = ({ reportMarkdown }) => {
     }, [inputText]);
 
     const handlePlayAudio = useCallback(async (text: string, messageId: string) => {
-        if (playingAudioId || generatingAudioId || !process.env.API_KEY) return;
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        if (playingAudioId || generatingAudioId) return;
         setGeneratingAudioId(messageId);
         try {
+            const ai = createGeminiClient();
             const audioData = await generateSpeech(ai, text);
             setPlayingAudioId(messageId);
             await playPcmAudio(audioData);
@@ -130,7 +134,16 @@ const Chat: React.FC<{ reportMarkdown: string }> = ({ reportMarkdown }) => {
     }, [playingAudioId, generatingAudioId]);
     
     const submitMessage = useCallback(async (userText: string) => {
-        if (!userText.trim() || !chatRef.current) return;
+        if (!userText.trim()) return;
+        
+        if (!chatRef.current) {
+            await initializeChat();
+            if (!chatRef.current) {
+                console.error("Chat is not initialized. Cannot send message.");
+                setMessages(prev => [...prev, { id: `err-${Date.now()}`, role: MessageRole.ASSISTANT, text: "Chat ist nicht bereit. Bitte versuchen Sie es erneut." }]);
+                return;
+            }
+        }
         
         setIsProcessing(true);
         const userMessageId = `msg-${Date.now()}`;
@@ -157,14 +170,13 @@ const Chat: React.FC<{ reportMarkdown: string }> = ({ reportMarkdown }) => {
         } finally {
             setIsProcessing(false);
         }
-    }, []);
+    }, [initializeChat]);
 
     const handleFinishedRecording = useCallback(async (audioBlob: Blob) => {
         setIsListening(false);
-        if (!process.env.API_KEY) return;
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         setIsProcessing(true);
         try {
+            const ai = createGeminiClient();
             const base64Audio = await blobToBase64(audioBlob);
             const response = await ai.models.generateContent({
               model: "gemini-2.5-flash",
