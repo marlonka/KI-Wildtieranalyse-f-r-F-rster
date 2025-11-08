@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF--8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23047857' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 10v.2A3 3 0 0 1 8.9 16H5a3 3 0 0 1-1-5.8V10a3 3 0 0 1 6 0Z'/%3E%3Cpath d='M7 16v6'/%3E%3Cpath d='M13 19v3'/%3E%3Cpath d='M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .8-1.7L13 3l-1.4 1.5'/%3E%3C/svg%3E" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tierwildanalyse</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      html, body, #root {
+        height: 100%;
+      }
+      @keyframes fade-in-up {
+        0% {
+          opacity: 0;
+          transform: translateY(20px) scale(0.95);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      @keyframes lightbox-fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+      }
+      @keyframes lightbox-zoom-in {
+          from { transform: scale(0.9); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+      }
+      .animate-lightbox-backdrop {
+        animation: lightbox-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      .animate-lightbox-content {
+        animation: lightbox-zoom-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      }
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .animate-spin-slow {
+        animation: spin 1.5s linear infinite;
+      }
+      @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+      }
+      .shimmer-text {
+        background: linear-gradient(
+          90deg,
+          #047857 25%,
+          #10b981 50%,
+          #047857 75%
+        );
+        background-size: 200% 100%;
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: shimmer 2s ease-in-out infinite;
+      }
+      @keyframes audio-pulse {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 1; transform: scale(1.05); }
+      }
+      .animate-pulse {
+        animation: audio-pulse 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+      .hover\:scale-102:hover { transform: scale(1.02); }
+      .active\:scale-98:active { transform: scale(0.98); }
+      .styled-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+      .styled-scrollbar::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 10px; }
+      .styled-scrollbar::-webkit-scrollbar-thumb { background: #047857; border-radius: 10px; }
+      .styled-scrollbar::-webkit-scrollbar-thumb:hover { background: #065f46; }
+      .dark-styled-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+      .dark-styled-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+      .dark-styled-scrollbar::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
+      .dark-styled-scrollbar::-webkit-scrollbar-thumb:hover { background: #34d399; }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.29.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
+</head>
+  <body class="bg-gray-100 text-gray-800">
+    <div id="root" class="h-full"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

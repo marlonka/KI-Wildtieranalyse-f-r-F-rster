@@ -1,0 +1,7 @@
+{
+  "name": "KI-Wildtieranalyse für Förster",
+  "description": "Gemini 2.5-gestützte Wildtieranalyse für Förster via Bild-Upload mit detailliertem Reporting und interaktivem Sprach- & Such-Dialog.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
